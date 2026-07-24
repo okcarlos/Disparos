@@ -69,7 +69,7 @@ onAuthStateChanged(auth, async (user) => {
 <div class="agendamento">
 
 <h3 class="titulo" data-id="${documento.id}">
-${agendamento.empresa} + ${agendamento.horario}
+${agendamento.empresa} - ${agendamento.horario}
 </h3>
 
 <div class="conteudo" id="agendamento-${documento.id}" style="display:none;">
