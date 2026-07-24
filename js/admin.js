@@ -46,7 +46,7 @@ onAuthStateChanged(auth, (user) => {
 <h3
 class="titulo"
 data-id="${documento.id}">
- ${dados.empresa} - ${dados.horario}
+${dados.empresa} - ${dados.horario}
 </h3>
 
 <div
