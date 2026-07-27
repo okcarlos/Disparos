@@ -80,11 +80,11 @@ onAuthStateChanged(auth, async (user) => {
                     break;
 
                 case "em andamento":
-                    emoji = "🟢";
+                    emoji = "🔒";
                     break;
 
                 case "concluido":
-                    emoji = "🔒";
+                    emoji = "🟢";
                     break;
 
                 case "cancelado":
