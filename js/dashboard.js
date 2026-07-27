@@ -29,7 +29,7 @@ onAuthStateChanged(auth, async (user) => {
 
     usuario.textContent = "Logado como: " + user.email;
 
-    // Busca os créditos do usuário
+    // Busca os créditos
     try {
 
         const referencia = doc(db, "usuarios", user.uid);
@@ -42,8 +42,10 @@ onAuthStateChanged(auth, async (user) => {
         }
 
     } catch (erro) {
+
         console.error("Erro ao carregar créditos:", erro);
         creditos.textContent = 0;
+
     }
 
     const busca = query(
@@ -60,16 +62,43 @@ onAuthStateChanged(auth, async (user) => {
             return;
         }
 
-        resultado.forEach((documento) => {
+        // Ordena do horário mais cedo para o mais tarde
+        const documentos = resultado.docs.sort((a, b) => {
+            return new Date(a.data().horario) - new Date(b.data().horario);
+        });
 
-    const agendamento = documento.data();
+        documentos.forEach((documento) => {
 
-    lista.innerHTML += `
+            const agendamento = documento.data();
+
+            let emoji = "📋";
+
+            switch (agendamento.status) {
+
+                case "pendente":
+                    emoji = "🟡";
+                    break;
+
+                case "em andamento":
+                    emoji = "🟢";
+                    break;
+
+                case "concluido":
+                    emoji = "🔒";
+                    break;
+
+                case "cancelado":
+                    emoji = "❌";
+                    break;
+
+            }
+
+            lista.innerHTML += `
 
 <div class="agendamento">
 
 <h3 class="titulo" data-id="${documento.id}">
-${agendamento.empresa} - ${agendamento.horario}
+▶ ${emoji} ${agendamento.empresa} - ${agendamento.horario}
 </h3>
 
 <div class="conteudo" id="agendamento-${documento.id}" style="display:none;">
@@ -126,62 +155,68 @@ Excluir disparo
 
 `;
 
-});
+        });
+
+        // Expandir/Recolher
         document.querySelectorAll(".titulo").forEach((titulo) => {
 
-    titulo.onclick = () => {
+            titulo.onclick = () => {
 
-    const conteudo = document.getElementById(
-        "agendamento-" + titulo.dataset.id
-    );
+                const conteudo = document.getElementById(
+                    "agendamento-" + titulo.dataset.id
+                );
 
-    if (conteudo.style.display === "none") {
-        conteudo.style.display = "block";
-        titulo.innerHTML = "▼ " + titulo.textContent.replace(/^▶ |^▼ /, "");
-    } else {
-        conteudo.style.display = "none";
-        titulo.innerHTML = "▶ " + titulo.textContent.replace(/^▶ |^▼ /, "");
-    }
+                const texto = titulo.textContent.replace(/^▶ |^▼ /, "");
 
-};
+                if (conteudo.style.display === "none") {
 
-});
+                    conteudo.style.display = "block";
+                    titulo.textContent = "▼ " + texto;
 
-document.querySelectorAll(".excluir").forEach((botao) => {
+                } else {
 
-    botao.onclick = async () => {
+                    conteudo.style.display = "none";
+                    titulo.textContent = "▶ " + texto;
 
-        if (!confirm("Deseja realmente excluir este disparo?")) return;
+                }
 
-        try {
+            };
 
-            await deleteDoc(
-                doc(db, "agendamentos", botao.dataset.id)
-            );
+        });
 
-            alert("Disparo excluído!");
+        // Excluir
+        document.querySelectorAll(".excluir").forEach((botao) => {
 
-        } catch (erro) {
+            botao.onclick = async () => {
 
-            console.error(erro);
-            alert("Erro ao excluir.");
+                if (!confirm("Deseja realmente excluir este disparo?")) return;
 
-        }
+                try {
 
-    };
+                    await deleteDoc(
+                        doc(db, "agendamentos", botao.dataset.id)
+                    );
 
-});
+                    alert("Disparo excluído!");
+
+                } catch (erro) {
+
+                    console.error(erro);
+                    alert("Erro ao excluir.");
+
+                }
+
+            };
+
+        });
 
     });
 
 });
 
-
-
 logout.addEventListener("click", async () => {
 
     await signOut(auth);
-
     location.href = "index.html";
 
 });
