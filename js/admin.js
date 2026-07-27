@@ -10,7 +10,9 @@ import {
     doc,
     updateDoc,
     deleteDoc,
-    onSnapshot
+    onSnapshot,
+    query,
+    orderBy
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const lista = document.getElementById("listaAgendamentos");
@@ -26,7 +28,12 @@ onAuthStateChanged(auth, (user) => {
 
     usuario.textContent = "Admin logado: " + user.email;
 
-    onSnapshot(collection(db, "agendamentos"), (resultado) => {
+    const busca = query(
+        collection(db, "agendamentos"),
+        orderBy("horario", "asc")
+    );
+
+    onSnapshot(busca, (resultado) => {
 
         lista.innerHTML = "";
 
@@ -39,14 +46,35 @@ onAuthStateChanged(auth, (user) => {
 
             const dados = documento.data();
 
+            let emoji = "📋";
+
+            switch (dados.status) {
+
+                case "pendente":
+                    emoji = "🟡";
+                    break;
+
+                case "em andamento":
+                    emoji = "🔒";
+                    break;
+
+                case "concluido":
+                    emoji = "🟢";
+                    break;
+
+                case "cancelado":
+                    emoji = "❌";
+                    break;
+
+            }
+
             lista.innerHTML += `
 
 <div class="agendamento">
 
-<h3
-class="titulo"
-data-id="${documento.id}">
-${dados.empresa} - ${dados.horario}
+<h3 class="titulo" data-id="${documento.id}">
+    <span class="seta">▶</span>
+    ${emoji} ${dados.empresa} - ${dados.horario}
 </h3>
 
 <div
@@ -56,7 +84,7 @@ style="display:none;">
 
 <p>
 <strong>Parceiro:</strong>
-${dados.parceiro} 
+${dados.parceiro}
 </p>
 
 <p>
@@ -95,20 +123,20 @@ ${dados.numeros?.join("<br>") || "Nenhum número"}
 <strong>Anexos:</strong><br>
 
 ${dados.arquivo
-? `<a href="${dados.arquivo}" target="_blank">📄 Arquivo</a><br>`
-: ""}
+                ? `<a href="${dados.arquivo}" target="_blank">📄 Arquivo</a><br>`
+                : ""}
 
 ${dados.imagem
-? `<a href="${dados.imagem}" target="_blank">🖼️ Imagem</a><br>`
-: ""}
+                ? `<a href="${dados.imagem}" target="_blank">🖼️ Imagem</a><br>`
+                : ""}
 
 ${dados.comprovante
-? `<a href="${dados.comprovante}" target="_blank">💳 Comprovante</a>`
-: ""}
+                ? `<a href="${dados.comprovante}" target="_blank">💳 Comprovante</a>`
+                : ""}
 
 ${!dados.arquivo && !dados.imagem && !dados.comprovante
-? "Nenhum arquivo anexado"
-: ""}
+                ? "Nenhum arquivo anexado"
+                : ""}
 
 </p>
 
@@ -128,7 +156,7 @@ Excluir disparo
 
         });
 
-        // Abrir / fechar
+        // Abrir / Fechar
         document.querySelectorAll(".titulo").forEach((titulo) => {
 
             titulo.onclick = () => {
@@ -137,17 +165,17 @@ Excluir disparo
                     "agendamento-" + titulo.dataset.id
                 );
 
-                const texto = titulo.textContent.replace(/^▶ |^▼ /, "");
+                const seta = titulo.querySelector(".seta");
 
                 if (conteudo.style.display === "none") {
 
                     conteudo.style.display = "block";
-                    titulo.textContent = "▼ " + texto;
+                    seta.textContent = "▼";
 
                 } else {
 
                     conteudo.style.display = "none";
-                    titulo.textContent = "▶ " + texto;
+                    seta.textContent = "▶";
 
                 }
 
@@ -160,12 +188,21 @@ Excluir disparo
 
             select.onchange = async () => {
 
-                await updateDoc(
-                    doc(db, "agendamentos", select.dataset.id),
-                    {
-                        status: select.value
-                    }
-                );
+                try {
+
+                    await updateDoc(
+                        doc(db, "agendamentos", select.dataset.id),
+                        {
+                            status: select.value
+                        }
+                    );
+
+                } catch (erro) {
+
+                    console.error(erro);
+                    alert("Erro ao alterar o status.");
+
+                }
 
             };
 
@@ -205,7 +242,6 @@ Excluir disparo
 logout.addEventListener("click", async () => {
 
     await signOut(auth);
-
     location.href = "index.html";
 
 });
