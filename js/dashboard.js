@@ -98,7 +98,8 @@ onAuthStateChanged(auth, async (user) => {
 <div class="agendamento">
 
 <h3 class="titulo" data-id="${documento.id}">
-${emoji} ${agendamento.empresa} - ${agendamento.horario}
+    <span class="seta">▶</span>
+    ${emoji} ${dados.empresa} - ${dados.horario}
 </h3>
 
 <div class="conteudo" id="agendamento-${documento.id}" style="display:none;">
@@ -160,23 +161,23 @@ Excluir disparo
         // Expandir/Recolher
         document.querySelectorAll(".titulo").forEach((titulo) => {
 
-            titulo.onclick = () => {
+          titulo.onclick = () => {
 
                 const conteudo = document.getElementById(
                     "agendamento-" + titulo.dataset.id
                 );
 
-                const texto = titulo.textContent.replace(/^▶ |^▼ /, "");
+                const seta = titulo.querySelector(".seta");
 
                 if (conteudo.style.display === "none") {
 
                     conteudo.style.display = "block";
-                    titulo.textContent = "▼ " + texto;
+                    seta.textContent = "▼";
 
                 } else {
 
                     conteudo.style.display = "none";
-                    titulo.textContent = "▶ " + texto;
+                    seta.textContent = "▶";
 
                 }
 
