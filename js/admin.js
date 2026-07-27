@@ -7,145 +7,114 @@ import {
 
 import {
     collection,
-    query,
-    where,
-    onSnapshot,
     doc,
-    getDoc,
-    deleteDoc
+    updateDoc,
+    deleteDoc,
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-const usuario = document.getElementById("usuario");
-const creditos = document.getElementById("creditos");
 const lista = document.getElementById("listaAgendamentos");
+const usuario = document.getElementById("usuario");
 const logout = document.getElementById("logout");
 
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, (user) => {
 
     if (!user) {
         location.href = "login.html";
         return;
     }
 
-    usuario.textContent = "Logado como: " + user.email;
+    usuario.textContent = "Admin logado: " + user.email;
 
-    // Busca os créditos
-    try {
-
-        const referencia = doc(db, "usuarios", user.uid);
-        const dados = await getDoc(referencia);
-
-        if (dados.exists()) {
-            creditos.textContent = dados.data().Creditos ?? 0;
-        } else {
-            creditos.textContent = 0;
-        }
-
-    } catch (erro) {
-
-        console.error("Erro ao carregar créditos:", erro);
-        creditos.textContent = 0;
-
-    }
-
-    const busca = query(
-        collection(db, "agendamentos"),
-        where("parceiro", "==", user.email)
-    );
-
-    onSnapshot(busca, (resultado) => {
+    onSnapshot(collection(db, "agendamentos"), (resultado) => {
 
         lista.innerHTML = "";
 
         if (resultado.empty) {
-            lista.innerHTML = "Nenhum agendamento cadastrado.";
+            lista.innerHTML = "Nenhum agendamento encontrado.";
             return;
         }
 
-        // Ordena do horário mais cedo para o mais tarde
-        const documentos = resultado.docs.sort((a, b) => {
-            return new Date(a.data().horario) - new Date(b.data().horario);
-        });
+        resultado.forEach((documento) => {
 
-        documentos.forEach((documento) => {
-
-            const agendamento = documento.data();
-
-            let emoji = "📋";
-
-            switch (agendamento.status) {
-
-                case "pendente":
-                    emoji = "🟡";
-                    break;
-
-                case "em andamento":
-                    emoji = "🟢";
-                    break;
-
-                case "concluido":
-                    emoji = "🔒";
-                    break;
-
-                case "cancelado":
-                    emoji = "❌";
-                    break;
-
-            }
+            const dados = documento.data();
 
             lista.innerHTML += `
 
 <div class="agendamento">
 
-<h3 class="titulo" data-id="${documento.id}">
-▶ ${emoji} ${agendamento.empresa} - ${agendamento.horario}
+<h3
+class="titulo"
+data-id="${documento.id}">
+${dados.empresa} - ${dados.horario}
 </h3>
 
-<div class="conteudo" id="agendamento-${documento.id}" style="display:none;">
+<div
+class="conteudo"
+id="agendamento-${documento.id}"
+style="display:none;">
+
+<p>
+<strong>Parceiro:</strong>
+${dados.parceiro} 
+</p>
 
 <p>
 <strong>Quantidade:</strong>
-${agendamento.quantidade}
+${dados.quantidade}
 </p>
 
 <p>
 <strong>Horário:</strong>
-${agendamento.horario}
+${dados.horario}
 </p>
 
 <p>
 <strong>Mensagem:</strong>
-${agendamento.texto}
+${dados.texto}
 </p>
 
 <p>
 <strong>Números:</strong><br>
-${agendamento.numeros?.join("<br>") || "Nenhum número"}
+${dados.numeros?.join("<br>") || "Nenhum número"}
 </p>
 
 <p>
 <strong>Status:</strong>
-${agendamento.status}
+
+<select class="status" data-id="${documento.id}">
+    <option value="pendente" ${dados.status === "pendente" ? "selected" : ""}>Pendente</option>
+    <option value="em andamento" ${dados.status === "em andamento" ? "selected" : ""}>Em andamento</option>
+    <option value="concluido" ${dados.status === "concluido" ? "selected" : ""}>Concluído</option>
+    <option value="cancelado" ${dados.status === "cancelado" ? "selected" : ""}>Cancelado</option>
+</select>
+
 </p>
 
 <p>
 <strong>Anexos:</strong><br>
 
-${agendamento.arquivo
-? `<a href="${agendamento.arquivo}" target="_blank">📄 Arquivo</a><br>`
+${dados.arquivo
+? `<a href="${dados.arquivo}" target="_blank">📄 Arquivo</a><br>`
 : ""}
 
-${agendamento.imagem
-? `<a href="${agendamento.imagem}" target="_blank">🖼️ Imagem</a><br>`
+${dados.imagem
+? `<a href="${dados.imagem}" target="_blank">🖼️ Imagem</a><br>`
 : ""}
 
-${agendamento.comprovante
-? `<a href="${agendamento.comprovante}" target="_blank">💳 Comprovante</a>`
+${dados.comprovante
+? `<a href="${dados.comprovante}" target="_blank">💳 Comprovante</a>`
+: ""}
+
+${!dados.arquivo && !dados.imagem && !dados.comprovante
+? "Nenhum arquivo anexado"
 : ""}
 
 </p>
 
-<button class="excluir" data-id="${documento.id}">
+<button
+class="excluir"
+data-id="${documento.id}">
 Excluir disparo
 </button>
 
@@ -153,11 +122,13 @@ Excluir disparo
 
 <hr>
 
+</div>
+
 `;
 
         });
 
-        // Expandir/Recolher
+        // Abrir / fechar
         document.querySelectorAll(".titulo").forEach((titulo) => {
 
             titulo.onclick = () => {
@@ -184,12 +155,29 @@ Excluir disparo
 
         });
 
+        // Alterar status
+        document.querySelectorAll(".status").forEach((select) => {
+
+            select.onchange = async () => {
+
+                await updateDoc(
+                    doc(db, "agendamentos", select.dataset.id),
+                    {
+                        status: select.value
+                    }
+                );
+
+            };
+
+        });
+
         // Excluir
         document.querySelectorAll(".excluir").forEach((botao) => {
 
             botao.onclick = async () => {
 
-                if (!confirm("Deseja realmente excluir este disparo?")) return;
+                if (!confirm("Deseja excluir este disparo?"))
+                    return;
 
                 try {
 
@@ -217,6 +205,7 @@ Excluir disparo
 logout.addEventListener("click", async () => {
 
     await signOut(auth);
+
     location.href = "index.html";
 
 });
