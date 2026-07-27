@@ -99,7 +99,7 @@ onAuthStateChanged(auth, async (user) => {
 
 <h3 class="titulo" data-id="${documento.id}">
     <span class="seta">▶</span>
-    ${emoji} ${dados.empresa} - ${dados.horario}
+    ${emoji} ${agendamento.empresa} - ${agendamento.horario}
 </h3>
 
 <div class="conteudo" id="agendamento-${documento.id}" style="display:none;">
